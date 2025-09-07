@@ -15,8 +15,8 @@ on:
 jobs:
   deploy:
     runs-on: ubuntu-latest
-    # Only run if Vercel secrets are configured
-    if: ${{ secrets.VERCEL_TOKEN != null && secrets.VERCEL_TOKEN != '' }}
+    # Only run if Vercel secrets are configured and workflow was manually triggered
+    if: ${{ github.event_name == 'workflow_dispatch' && secrets.VERCEL_TOKEN != '' }}
 
     steps:
     - name: Checkout code
@@ -56,8 +56,8 @@ jobs:
 
   setup-instructions:
     runs-on: ubuntu-latest
-    # Only run if Vercel secrets are NOT configured
-    if: ${{ secrets.VERCEL_TOKEN == null || secrets.VERCEL_TOKEN == '' }}
+    # Only run if Vercel secrets are NOT configured and workflow was manually triggered
+    if: ${{ github.event_name == 'workflow_dispatch' && secrets.VERCEL_TOKEN == '' }}
     
     steps:
     - name: Display setup instructions
