@@ -1,16 +1,26 @@
 import React, { useState } from 'react';
-import { Lightbulb, Target, DollarSign, Users, Menu, X } from 'lucide-react';
+import { Lightbulb, Target, DollarSign, Users, Menu, X, LogOut, Settings, Crown } from 'lucide-react';
+import { AuthProvider } from './contexts/AuthContext';
+import { useAuth } from './hooks/useAuth';
+import { useSubscription } from './hooks/useSubscription';
+import ProtectedRoute from './components/ProtectedRoute';
+import AuthModal from './components/auth/AuthModal';
 import Dashboard from './components/Dashboard';
 import IdeaGenerator from './components/IdeaGenerator';
 import ValidationTools from './components/ValidationTools';
 import MonetizationPlanner from './components/MonetizationPlanner';
 import AcquisitionPlanner from './components/AcquisitionPlanner';
+import PricingPage from './components/subscription/PricingPage';
 
-function App() {
+const AppContent = () => {
   const [activeTab, setActiveTab] = useState('dashboard');
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [user, setUser] = useState({ email: 'founder@example.com', subscription: 'free' });
-  const [ideas, setIdeas] = useState([]);
+  const [showAuthModal, setShowAuthModal] = useState(false);
+  const [showPricing, setShowPricing] = useState(false);
+  
+  const { user, signOut, isAuthenticated } = useAuth();
+  const { isPro, getSubscriptionStatus } = useSubscription();
+  const subscriptionStatus = getSubscriptionStatus();
 
   const navigationItems = [
     { id: 'dashboard', name: 'Dashboard', icon: Target },
@@ -20,20 +30,32 @@ function App() {
     { id: 'acquire', name: 'Acquisition', icon: Users },
   ];
 
+  const handleSignOut = async () => {
+    try {
+      await signOut();
+    } catch (error) {
+      console.error('Error signing out:', error);
+    }
+  };
+
   const renderContent = () => {
+    if (showPricing) {
+      return <PricingPage onClose={() => setShowPricing(false)} />;
+    }
+
     switch (activeTab) {
       case 'dashboard':
-        return <Dashboard ideas={ideas} user={user} />;
+        return <Dashboard />;
       case 'discover':
-        return <IdeaGenerator ideas={ideas} setIdeas={setIdeas} user={user} />;
+        return <IdeaGenerator />;
       case 'validate':
-        return <ValidationTools ideas={ideas} setIdeas={setIdeas} />;
+        return <ValidationTools />;
       case 'monetize':
-        return <MonetizationPlanner ideas={ideas} setIdeas={setIdeas} />;
+        return <MonetizationPlanner />;
       case 'acquire':
-        return <AcquisitionPlanner ideas={ideas} setIdeas={setIdeas} />;
+        return <AcquisitionPlanner />;
       default:
-        return <Dashboard ideas={ideas} user={user} />;
+        return <Dashboard />;
     }
   };
 
@@ -86,10 +108,25 @@ function App() {
 
         <div className="absolute bottom-4 left-4 right-4">
           <div className="bg-gray-50 rounded-lg p-4">
-            <div className="text-sm font-medium text-text-primary">{user.email}</div>
-            <div className="text-xs text-text-secondary capitalize">{user.subscription} Plan</div>
-            {user.subscription === 'free' && (
-              <button className="mt-2 w-full bg-accent text-white text-sm py-2 rounded-md hover:bg-opacity-90 transition-colors">
+            <div className="flex items-center justify-between mb-2">
+              <div className="text-sm font-medium text-text-primary">{user?.email}</div>
+              <button
+                onClick={handleSignOut}
+                className="p-1 hover:bg-gray-200 rounded transition-colors"
+                title="Sign out"
+              >
+                <LogOut className="w-4 h-4 text-text-secondary" />
+              </button>
+            </div>
+            <div className={`text-xs flex items-center ${subscriptionStatus.color}`}>
+              {isPro && <Crown className="w-3 h-3 mr-1" />}
+              {subscriptionStatus.label}
+            </div>
+            {!isPro && (
+              <button 
+                onClick={() => setShowPricing(true)}
+                className="mt-2 w-full bg-accent text-white text-sm py-2 rounded-md hover:bg-opacity-90 transition-colors"
+              >
                 Upgrade to Pro
               </button>
             )}
@@ -117,10 +154,26 @@ function App() {
 
         {/* Page content */}
         <div className="p-4 lg:p-6">
-          {renderContent()}
+          <ProtectedRoute>
+            {renderContent()}
+          </ProtectedRoute>
         </div>
       </div>
+
+      {/* Auth Modal */}
+      <AuthModal
+        isOpen={showAuthModal}
+        onClose={() => setShowAuthModal(false)}
+      />
     </div>
+  );
+};
+
+function App() {
+  return (
+    <AuthProvider>
+      <AppContent />
+    </AuthProvider>
   );
 }
 
